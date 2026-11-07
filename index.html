@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zen Burguer - Cardápio Online</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-amber-950 text-slate-100 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const INITIAL_PRODUCTS = [
+      { id: 1, name: 'Zen Smash Duplo', category: 'hamburgueres', price: 28.90, description: 'Dois smash burgers de 90g, queijo cheddar duplo, bacon crocante e molho especial Zen no pão brioche.', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60' },
+      { id: 2, name: 'Zen Classic Bacon', category: 'hamburgueres', price: 32.50, description: 'Hambúrguer artesanal de 180g, muito bacon, queijo prato, alface, tomate e maionese da casa.', image: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500&auto=format&fit=crop&q=60' },
+      { id: 3, name: 'Batata Rústica Zen', category: 'porcoes', price: 18.00, description: 'Batatas rústicas fritas com alecrim, alho e acompanhadas de maionese de ervas.', image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60' },
+      { id: 4, name: 'Coca-Cola 350ml', category: 'bebidas', price: 6.50, description: 'Lata 350ml trincando de gelada.', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60' }
+    ];
+
+    function App() {
+      const [view, setView] = React.useState('customer');
+      const [products, setProducts] = React.useState(() => {
+        const saved = localStorage.getItem('zen_burguer_products');
+        return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      });
+      const [cart, setCart] = React.useState([]);
+      const [pinInput, setPinInput] = React.useState('');
+      const [isAdminAuth, setIsAdminAuth] = React.useState(false);
+      const [selectedCategory, setSelectedCategory] = React.useState('todos');
+      const [editingProduct, setEditingProduct] = React.useState(null);
+
+      React.useEffect(() => {
+        localStorage.setItem('zen_burguer_products', JSON.stringify(products));
+      }, [products]);
+
+      const addToCart = (product) => {
+        setCart(prev => {
+          const exists = prev.find(item => item.id === product.id);
+          if (exists) return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+          return [...prev, { ...product, qty: 1 }];
+        });
+      };
+
+      const removeFromCart = (id) => {
+        setCart(prev => prev.filter(item => item.id !== id));
+      };
+
+      const updateCartQty = (id, delta) => {
+        setCart(prev => prev.map(item => {
+          if (item.id === id) {
+            const newQty = item.qty + delta;
+            return newQty > 0 ? { ...item, qty: newQty } : item;
+          }
+          return item;
+        }));
+      };
+
+      const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+      const sendWhatsAppOrder = () => {
+        if (cart.length === 0) return;
+        let text = '*--- PEDIDO ZEN BURGUER ---*\n\n';
+        cart.forEach(item => {
+          text += `• ${item.qty}x ${item.name} - R$ ${(item.price * item.qty).toFixed(2)}\n`;
+        });
+        text += `\n*Total:* R$ ${cartTotal.toFixed(2)}`;
+        window.open(`https://wa.me/5581999442366?text=${encodeURIComponent(text)}`, '_blank');
+      };
+
+      const filteredProducts = selectedCategory === 'todos' 
+        ? products 
+        : products.filter(p => p.category === selectedCategory);
+
+      return (
+        <div class="min-h-screen bg-neutral-900 text-amber-50">
+          <header class="bg-amber-950/80 border-b border-amber-800/40 sticky top-0 z-50 backdrop-blur-md">
+            <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-neutral-900 font-extrabold text-xl shadow-lg">Z</div>
+                <h1 class="text-2xl font-black tracking-wider text-amber-400 uppercase">Zen Burguer</h1>
+              </div>
+              <button 
+                onClick={() => setView(view === 'customer' ? 'admin' : 'customer')} 
+                class="px-4 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30 text-sm transition"
+              >
+                {view === 'customer' ? '🔑 Painel ADM' : '🍔 Voltar ao Cardápio'}
+              </button>
+            </div>
+          </header>
+
+          {view === 'customer' ? (
+            <main class="max-w-5xl mx-auto px-4 py-6">
+              <div class="bg-gradient-to-r from-amber-950 to-neutral-900 border border-amber-900/60 rounded-2xl p-6 mb-8 text-center shadow-2xl">
+                <h2 class="text-3xl font-black text-amber-400 mb-2">Faça seu Pedido Online</h2>
+                <p class="text-amber-200/70 text-sm">Entregas rápidas no WhatsApp oficial: (81) 99944-2366</p>
+              </div>
+
+              <div class="flex space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none">
+                {['todos', 'hamburgueres', 'porcoes', 'bebidas'].map(cat => (
+                  <button 
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    class={`px-5 py-2.5 rounded-full capitalize text-sm font-bold whitespace-nowrap transition ${selectedCategory === cat ? 'bg-amber-500 text-neutral-950' : 'bg-neutral-800 text-amber-200/60 hover:bg-neutral-700'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredProducts.map(product => (
+                  <div key={product.id} class="bg-neutral-800/80 border border-neutral-700/50 rounded-xl overflow-hidden flex flex-col sm:flex-row shadow-md">
+                    <img src={product.image} alt={product.name} class="w-full sm:w-36 h-36 object-cover" />
+                    <div class="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 class="font-bold text-lg text-amber-100">{product.name}</h3>
+                        <p class="text-xs text-neutral-400 mt-1">{product.description}</p>
+                      </div>
+                      <div class="flex justify-between items-center mt-4">
+                        <span class="text-amber-400 font-black text-lg">R$ {product.price.toFixed(2)}</span>
+                        <button onClick={() => addToCart(product)} class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-4 py-1.5 rounded-lg text-sm shadow">
+                          + Adicionar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {cart.length > 0 && (
+                <div class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-amber-500 text-neutral-950 p-4 rounded-2xl shadow-2xl flex justify-between items-center z-50">
+                  <div>
+                    <span class="text-xs font-bold uppercase tracking-wider block opacity-80">{cart.reduce((a,b) => a + b.qty, 0)} itens no carrinho</span>
+                    <span class="text-xl font-black">R$ {cartTotal.toFixed(2)}</span>
+                  </div>
+                  <button onClick={sendWhatsAppOrder} class="bg-neutral-950 text-amber-400 font-black px-5 py-2.5 rounded-xl hover:bg-neutral-900 transition">
+                    Enviar no Whats 📲
+                  </button>
+                </div>
+              )}
+            </main>
+          ) : (
+            <main class="max-w-3xl mx-auto px-4 py-8">
+              {!isAdminAuth ? (
+                <div class="bg-neutral-800 border border-amber-900/50 p-8 rounded-2xl max-w-md mx-auto text-center shadow-xl">
+                  <h2 class="text-2xl font-black text-amber-400 mb-4">Acesso Administrativo</h2>
+                  <input 
+                    type="password" 
+                    placeholder="Digite a Senha (1234)" 
+                    value={pinInput} 
+                    onChange={e => setPinInput(e.target.value)}
+                    class="w-full p-3 bg-neutral-900 border border-neutral-700 rounded-lg text-center mb-4 text-white text-lg"
+                  />
+                  <button 
+                    onClick={() => { if(pinInput === '1234') setIsAdminAuth(true); else alert('Senha Incorreta'); }}
+                    class="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black p-3 rounded-lg"
+                  >
+                    Entrar no Painel
+                  </button>
+                </div>
+              ) : (
+                <div class="space-y-6">
+                  <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-black text-amber-400">Gerenciar Cardápio</h2>
+                    <button onClick={() => setIsAdminAuth(false)} class="text-xs text-neutral-400 underline">Sair do ADM</button>
+                  </div>
+
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const newProd = {
+                      id: editingProduct ? editingProduct.id : Date.now(),
+                      name: form.name.value,
+                      category: form.category.value,
+                      price: parseFloat(form.price.value),
+                      description: form.description.value,
+                      image: form.image.value || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60'
+                    };
+                    if (editingProduct) {
+                      setProducts(products.map(p => p.id === editingProduct.id ? newProd : p));
+                      setEditingProduct(null);
+                    } else {
+                      setProducts([...products, newProd]);
+                    }
+                    form.reset();
+                  }} class="bg-neutral-800 p-6 rounded-xl border border-neutral-700 space-y-4">
+                    <h3 class="font-bold text-amber-300">{editingProduct ? 'Editar Item' : 'Adicionar Novo Item'}</h3>
+                    <input name="name" defaultValue={editingProduct?.name || ''} placeholder="Nome do Produto" required class="w-full p-2.5 bg-neutral-900 border border-neutral-700 rounded text-white" />
+                    <div class="grid grid-cols-2 gap-4">
+                      <input name="price" type="number" step="0.01" defaultValue={editingProduct?.price || ''} placeholder="Preço (Ex: 29.90)" required class="p-2.5 bg-neutral-900 border border-neutral-700 rounded text-white" />
+                      <select name="category" defaultValue={editingProduct?.category || 'hamburgueres'} class="p-2.5 bg-neutral-900 border border-neutral-700 rounded text-white">
+                        <option value="hamburgueres">Hambúrgueres</option>
+                        <option value="porcoes">Porções</option>
+                        <option value="bebidas">Bebidas</option>
+                      </select>
+                    </div>
+                    <input name="image" defaultValue={editingProduct?.image || ''} placeholder="URL da Imagem / Foto" class="w-full p-2.5 bg-neutral-900 border border-neutral-700 rounded text-white" />
+                    <textarea name="description" defaultValue={editingProduct?.description || ''} placeholder="Descrição dos ingredientes" required class="w-full p-2.5 bg-neutral-900 border border-neutral-700 rounded text-white h-20"></textarea>
+                    <div class="flex space-x-2">
+                      <button type="submit" class="flex-1 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold p-3 rounded">
+                        {editingProduct ? 'Salvar Alterações' : 'Cadastrar Item'}
+                      </button>
+                      {editingProduct && (
+                        <button type="button" onClick={() => setEditingProduct(null)} class="bg-neutral-700 text-white p-3 rounded">Cancelar</button>
+                      )}
+                    </div>
+                  </form>
+
+                  <div class="space-y-3">
+                    {products.map(p => (
+                      <div key={p.id} class="bg-neutral-800 p-4 rounded-lg border border-neutral-700 flex justify-between items-center">
+                        <div>
+                          <div class="font-bold text-amber-200">{p.name} - <span class="text-amber-400">R$ {p.price.toFixed(2)}</span></div>
+                          <div class="text-xs text-neutral-400">{p.category}</div>
+                        </div>
+                        <div class="flex space-x-2">
+                          <button onClick={() => setEditingProduct(p)} class="px-3 py-1 bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded text-xs">Editar</button>
+                          <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} class="px-3 py-1 bg-red-600/30 text-red-400 border border-red-500/30 rounded text-xs">Excluir</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </main>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
